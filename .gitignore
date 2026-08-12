@@ -7,11 +7,13 @@ backend/db.sqlite3
 backend/staticfiles/
 backend/.env
 
-# mobile (Expo/React Native) — added ahead of time for the frontend step
+# mobile (Expo/React Native)
 mobile/node_modules/
 mobile/.expo/
 mobile/dist/
 mobile/*.log
+mobile/.env
+mobile/.claude/
 
 # OS/editor cruft
 .DS_Store
