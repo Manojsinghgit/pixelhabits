@@ -1,0 +1,30 @@
+# Render "Blueprint" — lets you spin up the web service + Postgres together
+# in one step via https://dashboard.render.com/blueprints, instead of
+# clicking through manual setup.
+services:
+  - type: web
+    name: habittracker-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "python manage.py migrate && gunicorn habittracker.wsgi:application --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: habittracker.settings.prod
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: CORS_ALLOW_ALL_ORIGINS
+        value: "True"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: habittracker-db
+          property: connectionString
+
+databases:
+  - name: habittracker-db
+    plan: free
