@@ -2,6 +2,7 @@ import re
 
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Habit, HabitLog, Profile
@@ -42,15 +43,19 @@ class RegisterSerializer(serializers.ModelSerializer):
 class HabitSerializer(serializers.ModelSerializer):
     current_streak = serializers.IntegerField(read_only=True)
     longest_streak = serializers.IntegerField(read_only=True)
+    completed_today = serializers.SerializerMethodField()
 
     class Meta:
         model = Habit
         fields = [
             'id', 'name', 'icon', 'color', 'frequency', 'custom_days',
             'reminder_time', 'is_active', 'created_at',
-            'current_streak', 'longest_streak',
+            'current_streak', 'longest_streak', 'completed_today',
         ]
         read_only_fields = ['id', 'created_at']
+
+    def get_completed_today(self, obj):
+        return obj.logs.filter(date=timezone.localdate(), completed=True).exists()
 
     def validate_color(self, value):
         if not HEX_COLOR_RE.match(value):
