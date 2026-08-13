@@ -1,19 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
-import { colors, fontSize, radius, spacing } from '../theme';
+import { colors, fontSize, fontWeight, radius, spacing } from '../theme';
 
 interface TextFieldProps extends TextInputProps {
-  label: string;
+  label?: string;
   error?: string;
 }
 
-export function TextField({ label, error, style, ...inputProps }: TextFieldProps) {
+export function TextField({ label, error, style, onFocus, onBlur, ...inputProps }: TextFieldProps) {
+  const [focused, setFocused] = useState(false);
+
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
-        placeholderTextColor={colors.textMuted}
-        style={[styles.input, error && styles.inputError, style]}
+        placeholderTextColor={colors.textFaint}
+        style={[
+          styles.input,
+          focused && styles.inputFocused,
+          error && styles.inputError,
+          style,
+        ]}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
         {...inputProps}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -29,11 +44,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: fontSize.sm,
     marginBottom: spacing(0.75),
-    fontWeight: '600',
+    fontWeight: fontWeight.medium,
   },
   input: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
     borderRadius: radius.md,
     paddingHorizontal: spacing(2),
@@ -41,6 +56,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.text,
     minHeight: 52,
+  },
+  inputFocused: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceRaised,
   },
   inputError: {
     borderColor: colors.danger,

@@ -8,9 +8,16 @@ export type HabitsStackParamList = {
   CreateHabit: undefined;
   EditHabit: { habitId: number };
   HabitDetail: { habitId: number; habitName: string };
+  ArchivedHabits: undefined;
+};
+
+export type ProfileStackParamList = {
+  Profile: undefined;
+  AccountSettings: undefined;
 };
 
 export type MainTabParamList = {
   HabitsTab: undefined;
   Summary: undefined;
+  ProfileTab: undefined;
 };

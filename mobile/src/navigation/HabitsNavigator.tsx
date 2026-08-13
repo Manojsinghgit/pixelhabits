@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { ArchivedHabitsScreen } from '../screens/ArchivedHabitsScreen';
 import { HabitDetailScreen } from '../screens/HabitDetailScreen';
 import { HabitFormScreen } from '../screens/HabitFormScreen';
 import { HabitListScreen } from '../screens/HabitListScreen';
@@ -12,6 +13,7 @@ const headerOptions = {
   headerStyle: { backgroundColor: colors.background },
   headerTintColor: colors.text,
   headerShadowVisible: false,
+  headerTitleStyle: { fontWeight: '700' as const },
 };
 
 export function HabitsNavigator() {
@@ -29,6 +31,11 @@ export function HabitsNavigator() {
         options={{ title: 'Edit habit', ...headerOptions }}
       />
       <Stack.Screen name="HabitDetail" component={HabitDetailScreen} options={headerOptions} />
+      <Stack.Screen
+        name="ArchivedHabits"
+        component={ArchivedHabitsScreen}
+        options={{ title: 'Archived habits', ...headerOptions }}
+      />
     </Stack.Navigator>
   );
 }

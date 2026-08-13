@@ -86,13 +86,20 @@ class HabitSerializer(serializers.ModelSerializer):
 class HabitLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = HabitLog
-        fields = ['id', 'date', 'completed', 'created_at']
+        fields = ['id', 'date', 'completed', 'note', 'created_at']
         read_only_fields = ['id', 'created_at']
 
 
 class HabitLogToggleSerializer(serializers.Serializer):
     """Input for POST /habits/<id>/log/ — defaults to toggling today."""
     date = serializers.DateField(required=False)
+
+
+class HabitLogNoteSerializer(serializers.Serializer):
+    """Input for POST /habits/<id>/note/ — upserts a day's journal note
+    without touching its completion state."""
+    date = serializers.DateField(required=False)
+    note = serializers.CharField(allow_blank=True, trim_whitespace=False)
 
 
 class HabitSummaryItemSerializer(serializers.Serializer):
@@ -110,3 +117,16 @@ class HabitsSummarySerializer(serializers.Serializer):
     week_end = serializers.DateField()
     overall_completion_pct = serializers.FloatField()
     habits = HabitSummaryItemSerializer(many=True)
+
+
+class MeSerializer(serializers.Serializer):
+    """Combined User + Profile view for GET/PATCH /api/auth/me/."""
+    username = serializers.CharField(read_only=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    niche = serializers.ChoiceField(choices=Profile.NICHE_CHOICES, required=False)
+    timezone = serializers.CharField(required=False)
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, validators=[validate_password])

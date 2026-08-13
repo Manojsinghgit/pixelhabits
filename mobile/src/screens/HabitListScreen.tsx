@@ -1,6 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -12,15 +14,30 @@ import {
 import { extractErrorMessage } from '../api/errors';
 import { getHabit, listHabits, toggleHabitLog } from '../api/habits';
 import { useAuth } from '../auth/AuthContext';
+import { EmptyState } from '../components/EmptyState';
+import { FadeInView } from '../components/FadeInView';
 import { HabitCard } from '../components/HabitCard';
+import { ProgressBar } from '../components/ProgressBar';
+import { StepCountCard } from '../components/StepCountCard';
 import { HabitsStackParamList } from '../navigation/types';
-import { colors, fontSize, radius, spacing } from '../theme';
+import { colors, fontSize, fontWeight, gradients, radius, shadow, spacing } from '../theme';
 import { Habit } from '../types';
 
 type Props = NativeStackScreenProps<HabitsStackParamList, 'HabitList'>;
 
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function todayLabel(): string {
+  return new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
 export function HabitListScreen({ navigation }: Props) {
-  const { logout } = useAuth();
+  const { logout, username } = useAuth();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,7 +48,7 @@ export function HabitListScreen({ navigation }: Props) {
     try {
       setError(null);
       const data = await listHabits();
-      setHabits(data);
+      setHabits(data.filter((h) => h.is_active));
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
@@ -68,42 +85,81 @@ export function HabitListScreen({ navigation }: Props) {
     }
   };
 
+  const completedCount = useMemo(() => habits.filter((h) => h.completed_today).length, [habits]);
+  const totalCount = habits.length;
+  const progress = totalCount > 0 ? completedCount / totalCount : 0;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Today</Text>
-        <Pressable onPress={logout} hitSlop={12}>
-          <Text style={styles.logout}>Log out</Text>
-        </Pressable>
+        <View>
+          <Text style={styles.eyebrow}>{greeting()}{username ? `, ${username}` : ''}</Text>
+          <Text style={styles.title}>{todayLabel()}</Text>
+        </View>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => navigation.navigate('ArchivedHabits')} hitSlop={12} style={styles.logoutButton}>
+            <Ionicons name="archive-outline" size={18} color={colors.textMuted} />
+          </Pressable>
+          <Pressable onPress={logout} hitSlop={12} style={styles.logoutButton}>
+            <Ionicons name="log-out-outline" size={20} color={colors.textMuted} />
+          </Pressable>
+        </View>
       </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <View style={styles.dashboardRow}>
+        {totalCount > 0 && (
+          <View style={styles.progressCard}>
+            <View style={styles.progressTop}>
+              <Text style={styles.progressLabel}>Today&apos;s progress</Text>
+              <Text style={styles.progressValue}>
+                {completedCount}<Text style={styles.progressValueMuted}>/{totalCount}</Text>
+              </Text>
+            </View>
+            <ProgressBar progress={progress} color={colors.accent} />
+          </View>
+        )}
+        <View style={styles.stepCardWrap}>
+          <StepCountCard />
+        </View>
+      </View>
+
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
 
       <FlatList
         data={habits}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.text} />}
-        renderItem={({ item }) => (
-          <HabitCard
-            habit={item}
-            toggling={togglingId === item.id}
-            onPress={() => navigation.navigate('HabitDetail', { habitId: item.id, habitName: item.name })}
-            onToggleToday={() => handleToggle(item)}
-          />
+        renderItem={({ item, index }) => (
+          <FadeInView delay={index * 60}>
+            <HabitCard
+              habit={item}
+              toggling={togglingId === item.id}
+              onPress={() => navigation.navigate('HabitDetail', { habitId: item.id, habitName: item.name })}
+              onToggleToday={() => handleToggle(item)}
+            />
+          </FadeInView>
         )}
         ListEmptyComponent={
           !loading ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>🌱</Text>
-              <Text style={styles.emptyText}>No habits yet. Start with just one — small is fine.</Text>
-            </View>
+            <EmptyState
+              icon="sparkles-outline"
+              title="No habits yet"
+              subtitle="Start with just one — small and consistent beats big and abandoned."
+            />
           ) : null
         }
       />
 
-      <Pressable style={styles.fab} onPress={() => navigation.navigate('CreateHabit')}>
-        <Text style={styles.fabText}>+</Text>
+      <Pressable style={styles.fabWrap} onPress={() => navigation.navigate('CreateHabit')} hitSlop={8}>
+        <LinearGradient colors={gradients.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fab}>
+          <Ionicons name="add" size={28} color={colors.primaryText} />
+        </LinearGradient>
       </Pressable>
     </View>
   );
@@ -117,64 +173,106 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: spacing(3),
     paddingTop: spacing(3),
-    paddingBottom: spacing(1),
+    paddingBottom: spacing(2),
+  },
+  eyebrow: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    marginBottom: spacing(0.5),
   },
   title: {
     fontSize: fontSize.xl,
-    fontWeight: '700',
+    fontWeight: fontWeight.bold,
     color: colors.text,
   },
-  logout: {
+  headerActions: {
+    flexDirection: 'row',
+    gap: spacing(1),
+  },
+  logoutButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dashboardRow: {
+    flexDirection: 'row',
+    gap: spacing(1.5),
+    marginHorizontal: spacing(3),
+    marginBottom: spacing(2.5),
+  },
+  stepCardWrap: {
+    flex: 1,
+  },
+  progressCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing(2.25),
+    ...shadow.card,
+  },
+  progressTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: spacing(1.25),
+  },
+  progressLabel: {
     color: colors.textMuted,
     fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
   },
-  error: {
-    color: colors.danger,
+  progressValue: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.black,
+  },
+  progressValueMuted: {
+    color: colors.textFaint,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(1),
+    backgroundColor: colors.dangerSoft,
     marginHorizontal: spacing(3),
-    marginBottom: spacing(1),
+    marginBottom: spacing(2),
+    padding: spacing(1.5),
+    borderRadius: radius.md,
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: fontSize.sm,
+    flexShrink: 1,
   },
   list: {
     paddingHorizontal: spacing(3),
     paddingBottom: spacing(12),
     flexGrow: 1,
   },
-  empty: {
-    alignItems: 'center',
-    marginTop: spacing(8),
-  },
-  emptyEmoji: {
-    fontSize: 40,
-    marginBottom: spacing(1),
-  },
-  emptyText: {
-    color: colors.textMuted,
-    fontSize: fontSize.md,
-    textAlign: 'center',
-    paddingHorizontal: spacing(4),
-  },
-  fab: {
+  fabWrap: {
     position: 'absolute',
     right: spacing(3),
     bottom: spacing(4),
+  },
+  fab: {
     width: 60,
     height: 60,
     borderRadius: radius.pill,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  fabText: {
-    color: colors.primaryText,
-    fontSize: 32,
-    fontWeight: '400',
-    marginTop: -2,
+    ...shadow.glow(colors.primary),
   },
 });

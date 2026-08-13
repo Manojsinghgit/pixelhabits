@@ -1,12 +1,15 @@
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { extractErrorMessage } from '../api/errors';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/Button';
+import { FadeInView } from '../components/FadeInView';
+import { Logo } from '../components/Logo';
 import { TextField } from '../components/TextField';
 import { AuthStackParamList } from '../navigation/types';
-import { colors, fontSize, spacing } from '../theme';
+import { colors, fontSize, fontWeight, spacing } from '../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -34,35 +37,46 @@ export function LoginScreen({ navigation }: Props) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.content}>
-        <Text style={styles.emoji}>🧠</Text>
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Small steps, tracked kindly.</Text>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <FadeInView>
+          <Logo />
+          <Text style={styles.title}>Welcome back</Text>
+          <Text style={styles.subtitle}>Small steps, tracked kindly.</Text>
+        </FadeInView>
 
-        <TextField
-          label="Username"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        <TextField
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        <FadeInView delay={80}>
+          <View style={styles.card}>
+            <TextField
+              label="Username"
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TextField
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+            {error ? (
+              <View style={styles.errorBanner}>
+                <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
-        <Button title="Log in" onPress={handleLogin} loading={loading} disabled={!username || !password} />
+            <Button title="Log in" onPress={handleLogin} loading={loading} disabled={!username || !password} />
+          </View>
 
-        <Button
-          title="Need an account? Register"
-          variant="secondary"
-          onPress={() => navigation.navigate('Register')}
-        />
-      </View>
+          <Button
+            title="Need an account? Register"
+            variant="secondary"
+            onPress={() => navigation.navigate('Register')}
+          />
+        </FadeInView>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -73,20 +87,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: spacing(3),
-  },
-  emoji: {
-    fontSize: 48,
-    textAlign: 'center',
-    marginBottom: spacing(1),
+    paddingVertical: spacing(6),
   },
   title: {
     fontSize: fontSize.xl,
-    fontWeight: '700',
+    fontWeight: fontWeight.bold,
     color: colors.text,
     textAlign: 'center',
+    marginTop: spacing(2.5),
   },
   subtitle: {
     fontSize: fontSize.md,
@@ -94,9 +105,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing(4),
   },
-  error: {
-    color: colors.danger,
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing(2.5),
     marginBottom: spacing(2),
-    textAlign: 'center',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(1),
+    backgroundColor: colors.dangerSoft,
+    padding: spacing(1.5),
+    borderRadius: 12,
+    marginBottom: spacing(2),
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: fontSize.sm,
+    flexShrink: 1,
   },
 });

@@ -1,11 +1,13 @@
+import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 import { SummaryScreen } from '../screens/SummaryScreen';
-import { colors } from '../theme';
+import { colors, spacing } from '../theme';
 import { AuthNavigator } from './AuthNavigator';
 import { HabitsNavigator } from './HabitsNavigator';
+import { ProfileNavigator } from './ProfileNavigator';
 import { MainTabParamList } from './types';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -15,27 +17,44 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+        tabBarStyle: styles.tabBar,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarInactiveTintColor: colors.textFaint,
+        tabBarLabelStyle: styles.tabLabel,
       }}
     >
       <Tab.Screen
         name="HabitsTab"
         component={HabitsNavigator}
-        options={{ title: 'Habits', tabBarIcon: ({ color }) => <TabIcon symbol="✅" color={color} /> }}
+        options={{
+          title: 'Habits',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'checkbox' : 'checkbox-outline'} size={22} color={color} />
+          ),
+        }}
       />
       <Tab.Screen
         name="Summary"
         component={SummaryScreen}
-        options={{ title: 'Summary', tabBarIcon: ({ color }) => <TabIcon symbol="📊" color={color} /> }}
+        options={{
+          title: 'Summary',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} size={22} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileNavigator}
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'person-circle' : 'person-circle-outline'} size={22} color={color} />
+          ),
+        }}
       />
     </Tab.Navigator>
   );
-}
-
-function TabIcon({ symbol }: { symbol: string; color: string }) {
-  return <Text style={{ fontSize: 18 }}>{symbol}</Text>;
 }
 
 export function RootNavigator() {
@@ -58,5 +77,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tabBar: {
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    height: 64,
+    paddingTop: spacing(1),
+    paddingBottom: spacing(1),
+  },
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });

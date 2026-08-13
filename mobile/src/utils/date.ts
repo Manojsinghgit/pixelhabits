@@ -19,3 +19,12 @@ export function mondayIndexedWeekday(date: Date): number {
 export function startOfWeekMonday(date: Date): Date {
   return addDays(date, -mondayIndexedWeekday(date));
 }
+
+// Formats a "HH:MM" or "HH:MM:SS" 24-hour string (as stored by the backend)
+// into a locale-aware "8:30 AM" style label.
+export function formatTimeOfDay(time: string): string {
+  const [hourStr, minuteStr] = time.split(':');
+  const reference = new Date();
+  reference.setHours(Number(hourStr), Number(minuteStr), 0, 0);
+  return reference.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}

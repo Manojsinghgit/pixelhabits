@@ -1,10 +1,17 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { extractErrorMessage } from '../api/errors';
 import { getHabitsSummary } from '../api/habits';
-import { colors, fontSize, radius, spacing } from '../theme';
+import { EmptyState } from '../components/EmptyState';
+import { FadeInView } from '../components/FadeInView';
+import { IconBadge } from '../components/IconBadge';
+import { ProgressBar } from '../components/ProgressBar';
+import { ProgressRing } from '../components/ProgressRing';
+import { colors, fontSize, fontWeight, radius, shadow, spacing } from '../theme';
 import { HabitsSummary } from '../types';
+import { habitIconName } from '../utils/habitIcon';
 
 function formatRange(start: string, end: string): string {
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
@@ -57,31 +64,53 @@ export function SummaryScreen() {
       <Text style={styles.title}>This week</Text>
       {summary ? <Text style={styles.range}>{formatRange(summary.week_start, summary.week_end)}</Text> : null}
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
 
       {summary && (
         <>
-          <View style={styles.overallCard}>
-            <Text style={styles.overallValue}>{summary.overall_completion_pct}%</Text>
-            <Text style={styles.overallLabel}>overall completion</Text>
-          </View>
+          <FadeInView>
+            <View style={styles.overallCard}>
+              <ProgressRing progress={summary.overall_completion_pct / 100} size={128} strokeWidth={12}>
+                <Text style={styles.ringValue}>{summary.overall_completion_pct}%</Text>
+              </ProgressRing>
+              <Text style={styles.overallLabel}>overall completion</Text>
+            </View>
+          </FadeInView>
 
           {summary.habits.length === 0 ? (
-            <Text style={styles.empty}>No active habits yet.</Text>
+            <EmptyState
+              icon="stats-chart-outline"
+              title="No active habits yet"
+              subtitle="Create a habit to start seeing your weekly progress here."
+            />
           ) : (
-            summary.habits.map((habit) => (
-              <View key={habit.id} style={styles.habitRow}>
-                <View style={[styles.colorDot, { backgroundColor: habit.color }]} />
-                <View style={styles.habitInfo}>
-                  <Text style={styles.habitName}>
-                    {habit.icon} {habit.name}
-                  </Text>
-                  <Text style={styles.habitMeta}>
-                    🔥 {habit.current_streak} current · 🏆 {habit.longest_streak} best
-                  </Text>
+            summary.habits.map((habit, index) => (
+              <FadeInView key={habit.id} delay={80 + index * 60}>
+                <View style={styles.habitRow}>
+                  <IconBadge name={habitIconName(habit.icon)} color={habit.color} size={40} iconSize={20} />
+                  <View style={styles.habitInfo}>
+                    <Text style={styles.habitName} numberOfLines={1}>
+                      {habit.name}
+                    </Text>
+                    <View style={styles.habitMetaRow}>
+                      <Ionicons name="flame" size={12} color={colors.warning} />
+                      <Text style={styles.habitMeta}>{habit.current_streak} current</Text>
+                      <Text style={styles.habitMetaDot}>·</Text>
+                      <Ionicons name="trophy" size={12} color={colors.accent} />
+                      <Text style={styles.habitMeta}>{habit.longest_streak} best</Text>
+                    </View>
+                    <View style={styles.barWrap}>
+                      <ProgressBar progress={habit.week_completion_pct / 100} color={habit.color} height={6} />
+                    </View>
+                  </View>
+                  <Text style={styles.habitPct}>{habit.week_completion_pct}%</Text>
                 </View>
-                <Text style={styles.habitPct}>{habit.week_completion_pct}%</Text>
-              </View>
+              </FadeInView>
             ))
           )}
         </>
@@ -107,7 +136,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.xl,
-    fontWeight: '700',
+    fontWeight: fontWeight.bold,
     color: colors.text,
   },
   range: {
@@ -115,45 +144,51 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginBottom: spacing(3),
   },
-  error: {
-    color: colors.danger,
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(1),
+    backgroundColor: colors.dangerSoft,
+    padding: spacing(1.5),
+    borderRadius: radius.md,
     marginBottom: spacing(2),
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: fontSize.sm,
+    flexShrink: 1,
   },
   overallCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing(3),
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing(3.5),
     alignItems: 'center',
     marginBottom: spacing(3),
+    ...shadow.card,
   },
-  overallValue: {
-    fontSize: 40,
-    fontWeight: '800',
-    color: colors.primary,
+  ringValue: {
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.black,
+    color: colors.text,
   },
   overallLabel: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
-    marginTop: spacing(0.5),
-  },
-  empty: {
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: spacing(4),
+    marginTop: spacing(2),
+    fontWeight: fontWeight.medium,
   },
   habitRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
     padding: spacing(2),
     marginBottom: spacing(1.5),
-  },
-  colorDot: {
-    width: 10,
-    height: 10,
-    borderRadius: radius.pill,
-    marginRight: spacing(1.5),
+    gap: spacing(1.5),
   },
   habitInfo: {
     flex: 1,
@@ -161,16 +196,31 @@ const styles = StyleSheet.create({
   habitName: {
     color: colors.text,
     fontSize: fontSize.md,
-    fontWeight: '600',
+    fontWeight: fontWeight.bold,
+    marginBottom: spacing(0.5),
+  },
+  habitMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(0.5),
+    marginBottom: spacing(1),
   },
   habitMeta: {
     color: colors.textMuted,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
+  },
+  habitMetaDot: {
+    color: colors.textFaint,
+    fontSize: fontSize.xs,
+    marginHorizontal: spacing(0.25),
+  },
+  barWrap: {
     marginTop: spacing(0.25),
   },
   habitPct: {
     color: colors.text,
-    fontSize: fontSize.lg,
-    fontWeight: '700',
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
   },
 });

@@ -30,13 +30,14 @@ export function HabitHeatmap({ completedDates, color, weeksToShow = 14 }: HabitH
           iso,
           completed: completedDates.has(iso),
           isFuture: date > today,
+          isToday: formatDate(date) === formatDate(today),
         };
       });
     });
   }, [completedDates, weeksToShow]);
 
   return (
-    <View>
+    <View style={styles.card}>
       <View style={styles.row}>
         <View style={styles.dayLabels}>
           {DAY_LABELS.map((label, i) => (
@@ -64,6 +65,7 @@ export function HabitHeatmap({ completedDates, color, weeksToShow = 14 }: HabitH
                         : day.completed
                           ? { backgroundColor: color }
                           : styles.cellEmpty,
+                      day.isToday && !day.isFuture && { borderColor: colors.text, borderWidth: 1.5 },
                     ]}
                   />
                 ))}
@@ -72,11 +74,27 @@ export function HabitHeatmap({ completedDates, color, weeksToShow = 14 }: HabitH
           </View>
         </ScrollView>
       </View>
+
+      <View style={styles.legend}>
+        <Text style={styles.legendLabel}>Less</Text>
+        <View style={[styles.legendCell, styles.cellEmpty]} />
+        <View style={[styles.legendCell, { backgroundColor: `${color}55` }]} />
+        <View style={[styles.legendCell, { backgroundColor: `${color}AA` }]} />
+        <View style={[styles.legendCell, { backgroundColor: color }]} />
+        <Text style={styles.legendLabel}>More</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing(2),
+  },
   row: {
     flexDirection: 'row',
   },
@@ -86,7 +104,7 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   dayLabel: {
-    color: colors.textMuted,
+    color: colors.textFaint,
     fontSize: 10,
     height: CELL_SIZE,
     lineHeight: CELL_SIZE,
@@ -109,5 +127,21 @@ const styles = StyleSheet.create({
   },
   cellFuture: {
     backgroundColor: 'transparent',
+  },
+  legend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing(0.5),
+    marginTop: spacing(1.5),
+  },
+  legendLabel: {
+    color: colors.textFaint,
+    fontSize: fontSize.xs,
+  },
+  legendCell: {
+    width: 10,
+    height: 10,
+    borderRadius: 3,
   },
 });

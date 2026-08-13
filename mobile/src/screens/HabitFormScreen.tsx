@@ -1,3 +1,4 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import {
@@ -11,15 +12,18 @@ import {
 import { extractErrorMessage } from '../api/errors';
 import { createHabit, deleteHabit, getHabit, updateHabit } from '../api/habits';
 import { Button } from '../components/Button';
+import { FadeInView } from '../components/FadeInView';
 import { TextField } from '../components/TextField';
 import { HabitsStackParamList } from '../navigation/types';
-import { colors, fontSize, radius, spacing } from '../theme';
+import { colors, fontSize, fontWeight, radius, shadow, spacing } from '../theme';
 import { Frequency } from '../types';
+import { HABIT_ICON_OPTIONS, habitIconName } from '../utils/habitIcon';
+import { HABIT_TEMPLATES } from '../utils/habitTemplates';
+import { cancelHabitReminder, scheduleHabitReminder } from '../utils/notifications';
 
 type Props = NativeStackScreenProps<HabitsStackParamList, 'CreateHabit' | 'EditHabit'>;
 
-const ICON_OPTIONS = ['✅', '💧', '🏃', '🧘', '📖', '💊', '🦷', '🥗', '😴', '🧹', '✍️', '🚭'];
-const COLOR_OPTIONS = ['#6C63FF', '#00AEEF', '#3DDC97', '#FF9F43', '#FF6B6B', '#F368E0'];
+const COLOR_OPTIONS = ['#7C6CFF', '#00AEEF', '#3DDC97', '#FFB84D', '#FF6B6B', '#F368E0'];
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -28,13 +32,15 @@ export function HabitFormScreen({ navigation, route }: Props) {
   const isEditing = habitId !== undefined;
 
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState(ICON_OPTIONS[0]);
+  const [icon, setIcon] = useState(HABIT_ICON_OPTIONS[0].value);
   const [color, setColor] = useState(COLOR_OPTIONS[0]);
   const [frequency, setFrequency] = useState<Frequency>('daily');
   const [customDays, setCustomDays] = useState<number[]>([]);
   const [reminderTime, setReminderTime] = useState('');
+  const [isActive, setIsActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(isEditing);
 
   useEffect(() => {
@@ -48,6 +54,7 @@ export function HabitFormScreen({ navigation, route }: Props) {
         setFrequency(habit.frequency);
         setCustomDays(habit.custom_days);
         setReminderTime(habit.reminder_time ? habit.reminder_time.slice(0, 5) : '');
+        setIsActive(habit.is_active);
       } catch (err) {
         setError(extractErrorMessage(err));
       } finally {
@@ -82,16 +89,32 @@ export function HabitFormScreen({ navigation, route }: Props) {
         custom_days: frequency === 'custom' ? customDays : [],
         reminder_time: reminderTime ? `${reminderTime}:00` : null,
       };
-      if (habitId) {
-        await updateHabit(habitId, payload);
-      } else {
-        await createHabit(payload);
-      }
+      const saved = habitId ? await updateHabit(habitId, payload) : await createHabit(payload);
+      await scheduleHabitReminder(saved);
       navigation.goBack();
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleArchiveToggle = async () => {
+    if (!habitId) return;
+    setArchiving(true);
+    try {
+      const nextActive = !isActive;
+      const saved = await updateHabit(habitId, { is_active: nextActive });
+      if (nextActive) {
+        await scheduleHabitReminder(saved);
+      } else {
+        await cancelHabitReminder(habitId);
+      }
+      navigation.goBack();
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setArchiving(false);
     }
   };
 
@@ -105,6 +128,7 @@ export function HabitFormScreen({ navigation, route }: Props) {
         onPress: async () => {
           try {
             await deleteHabit(habitId);
+            await cancelHabitReminder(habitId);
             navigation.popToTop();
           } catch (err) {
             setError(extractErrorMessage(err));
@@ -120,86 +144,142 @@ export function HabitFormScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TextField label="Name" value={name} onChangeText={setName} placeholder="e.g. Drink water" />
-
-      <Text style={styles.label}>Icon</Text>
-      <View style={styles.row}>
-        {ICON_OPTIONS.map((option) => (
-          <Pressable
-            key={option}
-            onPress={() => setIcon(option)}
-            style={[styles.iconOption, icon === option && styles.iconOptionSelected]}
-          >
-            <Text style={styles.iconText}>{option}</Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Color</Text>
-      <View style={styles.row}>
-        {COLOR_OPTIONS.map((option) => (
-          <Pressable
-            key={option}
-            onPress={() => setColor(option)}
-            style={[
-              styles.colorOption,
-              { backgroundColor: option },
-              color === option && styles.colorOptionSelected,
-            ]}
-          />
-        ))}
-      </View>
-
-      <Text style={styles.label}>Frequency</Text>
-      <View style={styles.row}>
-        <Pressable
-          onPress={() => setFrequency('daily')}
-          style={[styles.chip, frequency === 'daily' && styles.chipSelected]}
-        >
-          <Text style={[styles.chipText, frequency === 'daily' && styles.chipTextSelected]}>Daily</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setFrequency('custom')}
-          style={[styles.chip, frequency === 'custom' && styles.chipSelected]}
-        >
-          <Text style={[styles.chipText, frequency === 'custom' && styles.chipTextSelected]}>Custom days</Text>
-        </Pressable>
-      </View>
-
-      {frequency === 'custom' && (
-        <>
-          <Text style={styles.label}>Which days?</Text>
-          <View style={styles.row}>
-            {DAY_LABELS.map((label, index) => (
+      {!isEditing && (
+        <FadeInView>
+          <Text style={styles.label}>Quick start</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.templateRow}>
+            {HABIT_TEMPLATES.map((template) => (
               <Pressable
-                key={label}
-                onPress={() => toggleDay(index)}
-                style={[styles.chip, customDays.includes(index) && styles.chipSelected]}
+                key={template.name}
+                onPress={() => {
+                  setName(template.name);
+                  setIcon(template.icon);
+                  setColor(template.color);
+                }}
+                style={[styles.templateChip, { borderColor: `${template.color}55` }]}
               >
-                <Text style={[styles.chipText, customDays.includes(index) && styles.chipTextSelected]}>
-                  {label}
-                </Text>
+                <MaterialCommunityIcons name={habitIconName(template.icon)} size={16} color={template.color} />
+                <Text style={styles.templateChipText}>{template.name}</Text>
               </Pressable>
             ))}
-          </View>
-        </>
+          </ScrollView>
+        </FadeInView>
       )}
 
-      <TextField
-        label="Reminder time (optional)"
-        value={reminderTime}
-        onChangeText={setReminderTime}
-        placeholder="08:30"
-        keyboardType="numbers-and-punctuation"
-      />
+      <FadeInView delay={20}>
+        <TextField label="Name" value={name} onChangeText={setName} placeholder="e.g. Drink water" />
+      </FadeInView>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <FadeInView delay={60}>
+        <View style={styles.card}>
+          <Text style={styles.label}>Icon</Text>
+          <View style={styles.row}>
+            {HABIT_ICON_OPTIONS.map((option) => {
+              const selected = icon === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setIcon(option.value)}
+                  style={[styles.iconOption, selected && { borderColor: color, backgroundColor: `${color}1F` }]}
+                >
+                  <MaterialCommunityIcons
+                    name={option.icon}
+                    size={22}
+                    color={selected ? color : colors.textMuted}
+                  />
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.label, styles.labelSpaced]}>Color</Text>
+          <View style={styles.row}>
+            {COLOR_OPTIONS.map((option) => {
+              const selected = color === option;
+              return (
+                <Pressable
+                  key={option}
+                  onPress={() => setColor(option)}
+                  style={[styles.colorOption, { backgroundColor: option }]}
+                >
+                  {selected ? <Ionicons name="checkmark" size={18} color="#FFFFFF" /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </FadeInView>
+
+      <FadeInView delay={120}>
+        <View style={styles.card}>
+          <Text style={styles.label}>Frequency</Text>
+          <View style={styles.row}>
+            <Pressable
+              onPress={() => setFrequency('daily')}
+              style={[styles.chip, frequency === 'daily' && styles.chipSelected]}
+            >
+              <Text style={[styles.chipText, frequency === 'daily' && styles.chipTextSelected]}>Daily</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setFrequency('custom')}
+              style={[styles.chip, frequency === 'custom' && styles.chipSelected]}
+            >
+              <Text style={[styles.chipText, frequency === 'custom' && styles.chipTextSelected]}>Custom days</Text>
+            </Pressable>
+          </View>
+
+          {frequency === 'custom' && (
+            <>
+              <Text style={[styles.label, styles.labelSpaced]}>Which days?</Text>
+              <View style={styles.row}>
+                {DAY_LABELS.map((label, index) => (
+                  <Pressable
+                    key={label}
+                    onPress={() => toggleDay(index)}
+                    style={[styles.chip, customDays.includes(index) && styles.chipSelected]}
+                  >
+                    <Text style={[styles.chipText, customDays.includes(index) && styles.chipTextSelected]}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
+        </View>
+      </FadeInView>
+
+      <FadeInView delay={180}>
+        <TextField
+          label="Reminder time (optional)"
+          value={reminderTime}
+          onChangeText={setReminderTime}
+          placeholder="08:30"
+          keyboardType="numbers-and-punctuation"
+        />
+      </FadeInView>
+
+      {error ? (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : null}
 
       <Button title={isEditing ? 'Save changes' : 'Create habit'} onPress={handleSave} loading={saving} disabled={!name.trim()} />
 
       {isEditing && (
         <View style={styles.deleteWrap}>
-          <Button title="Delete habit" variant="secondary" onPress={handleDelete} />
+          <Button
+            title={isActive ? 'Archive habit' : 'Restore habit'}
+            variant="secondary"
+            icon={isActive ? 'archive-outline' : 'arrow-undo-outline'}
+            onPress={handleArchiveToggle}
+            loading={archiving}
+          />
+          <View style={styles.deleteWrap}>
+            <Button title="Delete habit" variant="danger" icon="trash-outline" onPress={handleDelete} />
+          </View>
         </View>
       )}
     </ScrollView>
@@ -215,17 +295,47 @@ const styles = StyleSheet.create({
     padding: spacing(3),
     paddingBottom: spacing(8),
   },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing(2.25),
+    marginBottom: spacing(2),
+    ...shadow.card,
+  },
   label: {
     color: colors.textMuted,
     fontSize: fontSize.sm,
-    fontWeight: '600',
-    marginBottom: spacing(1),
+    fontWeight: fontWeight.medium,
+    marginBottom: spacing(1.25),
+  },
+  labelSpaced: {
+    marginTop: spacing(2.5),
   },
   row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: spacing(1.25),
+  },
+  templateRow: {
     gap: spacing(1),
-    marginBottom: spacing(2.5),
+    paddingBottom: spacing(2),
+  },
+  templateChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(0.75),
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing(1.75),
+    paddingVertical: spacing(1),
+  },
+  templateChipText: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
   },
   iconOption: {
     width: 48,
@@ -233,26 +343,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconOptionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.surfaceAlt,
-  },
-  iconText: {
-    fontSize: 22,
   },
   colorOption: {
     width: 40,
     height: 40,
     borderRadius: radius.pill,
-    borderWidth: 3,
-    borderColor: 'transparent',
-  },
-  colorOptionSelected: {
-    borderColor: colors.text,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chip: {
     paddingHorizontal: spacing(2),
@@ -260,7 +360,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1.5,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
   },
   chipSelected: {
     borderColor: colors.primary,
@@ -269,15 +369,24 @@ const styles = StyleSheet.create({
   chipText: {
     color: colors.textMuted,
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: fontWeight.medium,
   },
   chipTextSelected: {
     color: colors.primaryText,
   },
-  error: {
-    color: colors.danger,
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(1),
+    backgroundColor: colors.dangerSoft,
+    padding: spacing(1.5),
+    borderRadius: radius.md,
     marginBottom: spacing(2),
-    textAlign: 'center',
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: fontSize.sm,
+    flexShrink: 1,
   },
   deleteWrap: {
     marginTop: spacing(2),

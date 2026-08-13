@@ -29,6 +29,7 @@ export interface HabitLog {
   id: number;
   date: string; // "YYYY-MM-DD"
   completed: boolean;
+  note: string;
   created_at: string;
 }
 

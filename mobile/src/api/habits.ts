@@ -45,6 +45,11 @@ export async function getHabitLogs(id: number, start?: string, end?: string): Pr
   return data;
 }
 
+export async function setHabitNote(id: number, note: string, date?: string): Promise<HabitLog> {
+  const { data } = await api.post<HabitLog>(`/api/habits/${id}/note/`, date ? { note, date } : { note });
+  return data;
+}
+
 export async function getHabitsSummary(): Promise<HabitsSummary> {
   const { data } = await api.get<HabitsSummary>('/api/habits/summary/');
   return data;

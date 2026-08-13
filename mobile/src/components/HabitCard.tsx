@@ -1,7 +1,10 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, fontSize, radius, spacing } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { colors, fontSize, fontWeight, radius, shadow, spacing } from '../theme';
 import { Habit } from '../types';
+import { habitIconName } from '../utils/habitIcon';
+import { IconBadge } from './IconBadge';
 
 interface HabitCardProps {
   habit: Habit;
@@ -11,27 +14,59 @@ interface HabitCardProps {
 }
 
 export function HabitCard({ habit, onPress, onToggleToday, toggling }: HabitCardProps) {
+  const checkScale = useRef(new Animated.Value(habit.completed_today ? 1 : 0)).current;
+  const cardScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.spring(checkScale, {
+      toValue: habit.completed_today ? 1 : 0,
+      useNativeDriver: true,
+      speed: 24,
+      bounciness: habit.completed_today ? 14 : 0,
+    }).start();
+  }, [checkScale, habit.completed_today]);
+
   return (
-    <Pressable onPress={onPress} style={styles.card}>
-      <View style={[styles.colorBar, { backgroundColor: habit.color }]} />
-      <View style={styles.info}>
-        <Text style={styles.name}>
-          {habit.icon} {habit.name}
-        </Text>
-        <Text style={styles.streak}>
-          🔥 {habit.current_streak} day{habit.current_streak === 1 ? '' : 's'}
-          {habit.longest_streak > habit.current_streak ? `  ·  best ${habit.longest_streak}` : ''}
-        </Text>
-      </View>
+    <Animated.View style={{ transform: [{ scale: cardScale }] }}>
       <Pressable
-        onPress={onToggleToday}
-        disabled={toggling}
-        hitSlop={12}
-        style={[styles.checkbox, habit.completed_today && styles.checkboxDone]}
+        onPress={onPress}
+        onPressIn={() => Animated.spring(cardScale, { toValue: 0.985, useNativeDriver: true, speed: 40, bounciness: 4 }).start()}
+        onPressOut={() => Animated.spring(cardScale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 6 }).start()}
+        style={styles.card}
       >
-        {habit.completed_today ? <Text style={styles.checkmark}>✓</Text> : null}
+        <View style={[styles.colorBar, { backgroundColor: habit.color }]} />
+        <IconBadge name={habitIconName(habit.icon)} color={habit.color} size={44} />
+        <View style={styles.info}>
+          <Text style={styles.name} numberOfLines={1}>
+            {habit.name}
+          </Text>
+          <View style={styles.streakRow}>
+            <Ionicons name="flame" size={14} color={colors.warning} />
+            <Text style={styles.streak}>
+              {habit.current_streak} day{habit.current_streak === 1 ? '' : 's'}
+            </Text>
+            {habit.longest_streak > habit.current_streak ? (
+              <Text style={styles.streakBest}>· best {habit.longest_streak}</Text>
+            ) : null}
+          </View>
+        </View>
+        <Pressable
+          onPress={onToggleToday}
+          disabled={toggling}
+          hitSlop={12}
+          style={[styles.checkbox, habit.completed_today && { backgroundColor: habit.color, borderColor: habit.color }]}
+        >
+          <Animated.View
+            style={{
+              transform: [{ scale: checkScale }],
+              opacity: checkScale,
+            }}
+          >
+            <Ionicons name="checkmark" size={20} color={colors.background} />
+          </Animated.View>
+        </Pressable>
       </Pressable>
-    </Pressable>
+    </Animated.View>
   );
 }
 
@@ -43,43 +78,50 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     marginBottom: spacing(1.5),
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing(1.75),
+    paddingHorizontal: spacing(2),
+    gap: spacing(1.75),
+    ...shadow.card,
   },
   colorBar: {
-    width: 6,
-    alignSelf: 'stretch',
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   info: {
     flex: 1,
-    paddingVertical: spacing(2),
-    paddingHorizontal: spacing(2),
   },
   name: {
     color: colors.text,
-    fontSize: fontSize.lg,
-    fontWeight: '600',
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
     marginBottom: spacing(0.5),
+  },
+  streakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(0.5),
   },
   streak: {
     color: colors.textMuted,
     fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+  },
+  streakBest: {
+    color: colors.textFaint,
+    fontSize: fontSize.sm,
   },
   checkbox: {
-    width: 44,
-    height: 44,
+    width: 32,
+    height: 32,
     borderRadius: radius.pill,
     borderWidth: 2,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing(2),
-  },
-  checkboxDone: {
-    backgroundColor: colors.success,
-    borderColor: colors.success,
-  },
-  checkmark: {
-    color: colors.background,
-    fontSize: fontSize.lg,
-    fontWeight: '800',
   },
 });
