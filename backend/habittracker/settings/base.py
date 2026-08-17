@@ -107,4 +107,10 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='', cast=Csv())
 CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
 
-FCM_SERVER_KEY = config('FCM_SERVER_KEY', default='')
+# Server-side push reminders (habits/management/commands/send_reminders.py).
+# pyfcm 2.x uses the FCM HTTP v1 API: a Firebase service-account JSON file
+# path (not the legacy server key) plus that project's id. Both empty by
+# default so dev/local setups don't need FCM configured — the command
+# no-ops until these are set.
+FCM_SERVICE_ACCOUNT_FILE = config('FCM_SERVICE_ACCOUNT_FILE', default='')
+FCM_PROJECT_ID = config('FCM_PROJECT_ID', default='')

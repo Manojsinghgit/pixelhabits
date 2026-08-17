@@ -1,17 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text } from '../components/Text';
+import { getGamification } from '../api/gamification';
 import { getHabitsSummary } from '../api/habits';
 import { useAuth } from '../auth/AuthContext';
+import { AchievementsGrid } from '../components/AchievementsGrid';
 import { Button } from '../components/Button';
 import { FadeInView } from '../components/FadeInView';
+import { ProgressBar } from '../components/ProgressBar';
 import { StatCard } from '../components/StatCard';
 import { StepCountCard } from '../components/StepCountCard';
 import { ProfileStackParamList } from '../navigation/types';
-import { colors, fontSize, fontWeight, radius, shadow, spacing } from '../theme';
+import { colors, fontSize, fontWeight, gradients, radius, shadow, spacing } from '../theme';
+import { Gamification } from '../types';
 import { getNotificationPermissionStatus, requestNotificationPermission } from '../utils/notifications';
 
 interface AggregateStats {
@@ -25,16 +32,19 @@ type Props = NativeStackScreenProps<ProfileStackParamList, 'Profile'>;
 
 export function ProfileScreen({ navigation }: Props) {
   const { username, logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const [stats, setStats] = useState<AggregateStats | null>(null);
+  const [gamification, setGamification] = useState<Gamification | null>(null);
   const [loading, setLoading] = useState(true);
   const [notifStatus, setNotifStatus] = useState<Notifications.PermissionStatus | null>(null);
   const [requesting, setRequesting] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [summary, permission] = await Promise.all([
+      const [summary, permission, gamificationData] = await Promise.all([
         getHabitsSummary(),
         getNotificationPermissionStatus(),
+        getGamification(),
       ]);
       setStats({
         totalHabits: summary.habits.length,
@@ -43,6 +53,7 @@ export function ProfileScreen({ navigation }: Props) {
         longestStreakEver: summary.habits.reduce((max, h) => Math.max(max, h.longest_streak), 0),
       });
       setNotifStatus(permission);
+      setGamification(gamificationData);
     } catch {
       // Profile is a nice-to-have surface — silently keep last known
       // values rather than blocking the screen on a banner error.
@@ -74,18 +85,47 @@ export function ProfileScreen({ navigation }: Props) {
   const initial = username ? username.charAt(0).toUpperCase() : '?';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { paddingTop: insets.top }]} contentContainerStyle={styles.content}>
       <FadeInView>
         <View style={styles.profileHeader}>
-          <View style={styles.avatar}>
+          <LinearGradient colors={gradients.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.avatar, shadow.glow(colors.primary)]}>
             <Text style={styles.avatarText}>{initial}</Text>
-          </View>
+          </LinearGradient>
           <View>
             <Text style={styles.username}>{username}</Text>
             <Text style={styles.subtitle}>Keeping it consistent, one day at a time.</Text>
           </View>
         </View>
       </FadeInView>
+
+      {gamification && (
+        <FadeInView delay={30}>
+          <LinearGradient
+            colors={[`${colors.primary}22`, `${colors.accent}14`]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.levelCard}
+          >
+            <View style={styles.levelTop}>
+              <View style={styles.levelBadge}>
+                <Text style={styles.levelBadgeText}>Lv {gamification.level}</Text>
+              </View>
+              <View style={styles.coinsRow}>
+                <Ionicons name="logo-bitcoin" size={16} color={colors.warning} />
+                <Text style={styles.coinsText}>{gamification.coins}</Text>
+              </View>
+            </View>
+            <ProgressBar
+              progress={gamification.xp_into_level / gamification.xp_for_next_level}
+              color={colors.primary}
+              height={8}
+            />
+            <Text style={styles.xpLabel}>
+              {gamification.xp_into_level}/{gamification.xp_for_next_level} XP to level {gamification.level + 1}
+            </Text>
+          </LinearGradient>
+        </FadeInView>
+      )}
 
       <FadeInView delay={60}>
         <Text style={styles.sectionTitle}>Activity</Text>
@@ -101,15 +141,38 @@ export function ProfileScreen({ navigation }: Props) {
         ) : (
           <View style={styles.statsGrid}>
             <View style={styles.statsRow}>
-              <StatCard icon="apps-outline" iconColor={colors.primary} value={stats?.totalHabits ?? 0} label="Active habits" />
-              <StatCard icon="checkmark-done-outline" iconColor={colors.accent} value={`${stats?.overallCompletionPct ?? 0}%`} label="Completion" />
+              <StatCard tint icon="apps-outline" iconColor={colors.primary} value={stats?.totalHabits ?? 0} label="Active habits" />
+              <StatCard tint icon="checkmark-done-outline" iconColor={colors.accent} value={`${stats?.overallCompletionPct ?? 0}%`} label="Completion" />
             </View>
             <View style={styles.statsRow}>
-              <StatCard icon="flame" iconColor={colors.warning} value={stats?.bestCurrentStreak ?? 0} label="Best current streak" />
-              <StatCard icon="trophy" iconColor={colors.success} value={stats?.longestStreakEver ?? 0} label="Longest streak ever" />
+              <StatCard tint icon="flame" iconColor={colors.warning} value={stats?.bestCurrentStreak ?? 0} label="Best current streak" />
+              <StatCard tint icon="trophy" iconColor={colors.success} value={stats?.longestStreakEver ?? 0} label="Longest streak ever" />
             </View>
           </View>
         )}
+      </FadeInView>
+
+      {gamification && (
+        <FadeInView delay={130}>
+          <Text style={styles.sectionTitle}>Achievements</Text>
+          <View style={styles.sectionSpacing}>
+            <AchievementsGrid achievements={gamification.achievements} />
+          </View>
+        </FadeInView>
+      )}
+
+      <FadeInView delay={145}>
+        <Text style={styles.sectionTitle}>Friends</Text>
+        <Pressable style={styles.linkRow} onPress={() => navigation.navigate('Friends')}>
+          <View style={[styles.iconWrap, styles.iconWrapOff]}>
+            <Ionicons name="people-outline" size={18} color={colors.textMuted} />
+          </View>
+          <View style={styles.reminderText}>
+            <Text style={styles.reminderTitle}>Friends & leaderboard</Text>
+            <Text style={styles.reminderSubtitle}>Add friends, see who's most consistent this week.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+        </Pressable>
       </FadeInView>
 
       <FadeInView delay={160}>
@@ -190,12 +253,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: colors.primarySoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.black,
   },
@@ -231,6 +293,47 @@ const styles = StyleSheet.create({
   },
   sectionSpacing: {
     marginBottom: spacing(3),
+  },
+  levelCard: {
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing(2.25),
+    marginBottom: spacing(3),
+    ...shadow.card,
+  },
+  levelTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing(1.25),
+  },
+  levelBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing(1.5),
+    paddingVertical: spacing(0.5),
+  },
+  levelBadgeText: {
+    color: colors.primaryText,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.black,
+  },
+  coinsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(0.5),
+  },
+  coinsText: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+  },
+  xpLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
+    marginTop: spacing(1),
   },
   card: {
     backgroundColor: colors.surface,

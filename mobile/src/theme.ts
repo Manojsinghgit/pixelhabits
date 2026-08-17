@@ -1,29 +1,31 @@
+import { Platform } from 'react-native';
+
 // Centralized so the ADHD-friendly design choices (high contrast, large
 // touch targets, calm palette) stay consistent instead of drifting per screen.
 export const colors = {
-  background: '#0B0E1A',
-  surface: '#171B2E',
-  surfaceRaised: '#1E2338',
-  surfaceAlt: '#262C48',
-  overlay: 'rgba(11,14,26,0.72)',
+  background: '#080B08',
+  surface: '#10150F',
+  surfaceRaised: '#161D14',
+  surfaceAlt: '#1E271B',
+  overlay: 'rgba(6,10,6,0.72)',
 
-  primary: '#7C6CFF',
-  primaryDark: '#5A4FD9',
-  primarySoft: 'rgba(124,108,255,0.16)',
-  primaryText: '#FFFFFF',
+  primary: '#22C55E',
+  primaryDark: '#16A34A',
+  primarySoft: 'rgba(34,197,94,0.16)',
+  primaryText: '#07170D',
 
-  accent: '#00D9C0',
-  accentSoft: 'rgba(0,217,192,0.14)',
+  accent: '#84CC16',
+  accentSoft: 'rgba(132,204,22,0.14)',
 
-  text: '#F5F6FA',
-  textMuted: '#9BA0C0',
-  textFaint: '#6A6F92',
+  text: '#EAF5EC',
+  textMuted: '#8FA893',
+  textFaint: '#5B6E5D',
 
-  border: '#2A2F4C',
-  borderLight: '#333A5C',
+  border: '#1C261A',
+  borderLight: '#28351F',
 
-  success: '#3DDC97',
-  successSoft: 'rgba(61,220,151,0.14)',
+  success: '#4ADE80',
+  successSoft: 'rgba(74,222,128,0.14)',
   danger: '#FF6B6B',
   dangerSoft: 'rgba(255,107,107,0.14)',
   warning: '#FFB84D',
@@ -31,10 +33,10 @@ export const colors = {
 };
 
 export const gradients = {
-  primary: ['#8A7CFF', '#6C5CE0'] as const,
-  accent: ['#00E0C6', '#00A896'] as const,
-  success: ['#4FE3A8', '#2BB37B'] as const,
-  header: ['#1C2140', '#12152A'] as const,
+  primary: ['#34D399', '#16A34A'] as const,
+  accent: ['#BEF264', '#65A30D'] as const,
+  success: ['#4ADE80', '#16A34A'] as const,
+  header: ['#0F150E', '#080B08'] as const,
 };
 
 export const spacing = (n: number) => n * 8;
@@ -62,6 +64,15 @@ export const fontWeight = {
   bold: '700' as const,
   black: '800' as const,
 };
+
+// A real monospace font per platform (not a downloaded/async one) — every
+// weight in fontWeight above renders correctly with these, on every device,
+// with no font-load flash or risk of a broken build if a download fails.
+export const fontFamily = Platform.select({
+  ios: 'Menlo',
+  android: 'monospace',
+  default: 'ui-monospace, "SF Mono", Menlo, Consolas, "JetBrains Mono", monospace',
+});
 
 export const shadow = {
   card: {

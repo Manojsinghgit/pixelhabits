@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { colors, fontSize, fontWeight, radius, shadow, spacing } from '../theme';
 
 interface StatCardProps {
@@ -8,11 +9,17 @@ interface StatCardProps {
   iconColor: string;
   value: string | number;
   label: string;
+  tint?: boolean;
 }
 
-export function StatCard({ icon, iconColor, value, label }: StatCardProps) {
+export function StatCard({ icon, iconColor, value, label, tint }: StatCardProps) {
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        tint && { backgroundColor: `${iconColor}14`, borderColor: `${iconColor}3D` },
+      ]}
+    >
       <View style={[styles.iconWrap, { backgroundColor: `${iconColor}26` }]}>
         <Ionicons name={icon} size={20} color={iconColor} />
       </View>

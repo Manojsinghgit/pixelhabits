@@ -1,15 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { extractErrorMessage } from '../api/errors';
 import { getHabit, getHabitLogs, setHabitNote, toggleHabitLog } from '../api/habits';
 import { Button } from '../components/Button';
 import { FadeInView } from '../components/FadeInView';
 import { HabitHeatmap } from '../components/HabitHeatmap';
+import { IconButton } from '../components/IconButton';
 import { IconBadge } from '../components/IconBadge';
 import { MilestoneBadges } from '../components/MilestoneBadges';
+import { ProgressBar } from '../components/ProgressBar';
 import { StatCard } from '../components/StatCard';
 import { TextField } from '../components/TextField';
 import { HabitsStackParamList } from '../navigation/types';
@@ -69,11 +73,11 @@ export function HabitDetailScreen({ navigation, route }: Props) {
     }, [load])
   );
 
-  const handleToggle = async () => {
+  const handleToggle = async (delta?: number) => {
     if (!habit) return;
     setToggling(true);
     try {
-      await toggleHabitLog(habit.id);
+      await toggleHabitLog(habit.id, undefined, habit.target_count ? delta : undefined);
       await load();
     } catch (err) {
       setError(extractErrorMessage(err));
@@ -112,56 +116,95 @@ export function HabitDetailScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <FadeInView>
-        <View style={styles.headerRow}>
-          <View style={styles.headerLeft}>
-            <IconBadge name={habitIconName(habit.icon)} color={habit.color} size={52} iconSize={26} />
-            <Text style={styles.name} numberOfLines={2}>
-              {habit.name}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => navigation.navigate('EditHabit', { habitId: habit.id })}
-            hitSlop={12}
-            style={styles.editButton}
-          >
-            <Ionicons name="create-outline" size={20} color={colors.primary} />
-          </Pressable>
-        </View>
-      </FadeInView>
-
-      <FadeInView delay={40}>
-        <View style={styles.metaRow}>
-          <View style={styles.metaChip}>
-            <Ionicons name="repeat-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.metaChipText}>
-              {habit.frequency === 'daily' ? 'Every day' : `${habit.custom_days.length} day${habit.custom_days.length === 1 ? '' : 's'}/week`}
-            </Text>
-          </View>
-          {habit.reminder_time ? (
-            <View style={styles.metaChip}>
-              <Ionicons name="notifications-outline" size={14} color={colors.textMuted} />
-              <Text style={styles.metaChipText}>{formatTimeOfDay(habit.reminder_time)}</Text>
+      <LinearGradient
+        colors={[`${habit.color}33`, `${habit.color}00`]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.heroBanner}
+      >
+        <FadeInView>
+          <View style={styles.headerRow}>
+            <View style={styles.headerLeft}>
+              <IconBadge name={habitIconName(habit.icon)} color={habit.color} size={52} iconSize={26} />
+              <Text style={styles.name} numberOfLines={2}>
+                {habit.name}
+              </Text>
             </View>
-          ) : null}
-        </View>
-      </FadeInView>
+            <IconButton
+              name="create-outline"
+              color={colors.primary}
+              onPress={() => navigation.navigate('EditHabit', { habitId: habit.id })}
+              style={styles.editButton}
+            />
+          </View>
+        </FadeInView>
+
+        <FadeInView delay={40}>
+          <View style={styles.metaRow}>
+            <View style={styles.metaChip}>
+              <Ionicons name="repeat-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.metaChipText}>
+                {habit.frequency === 'daily' ? 'Every day' : `${habit.custom_days.length} day${habit.custom_days.length === 1 ? '' : 's'}/week`}
+              </Text>
+            </View>
+            {habit.reminder_time ? (
+              <View style={styles.metaChip}>
+                <Ionicons name="notifications-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.metaChipText}>{formatTimeOfDay(habit.reminder_time)}</Text>
+              </View>
+            ) : null}
+          </View>
+        </FadeInView>
+      </LinearGradient>
 
       <FadeInView delay={70}>
         <View style={styles.statsRow}>
-          <StatCard icon="flame" iconColor={colors.warning} value={habit.current_streak} label="Current streak" />
-          <StatCard icon="trophy" iconColor={colors.accent} value={habit.longest_streak} label="Best streak" />
+          <StatCard tint icon="flame" iconColor={colors.warning} value={habit.current_streak} label="Current streak" />
+          <StatCard tint icon="trophy" iconColor={colors.accent} value={habit.longest_streak} label="Best streak" />
         </View>
       </FadeInView>
 
       <FadeInView delay={130}>
-        <Button
-          title={habit.completed_today ? 'Marked done today' : 'Mark done for today'}
-          icon={habit.completed_today ? 'checkmark-circle' : undefined}
-          onPress={handleToggle}
-          loading={toggling}
-          variant={habit.completed_today ? 'secondary' : 'primary'}
-        />
+        {habit.target_count ? (
+          <View style={styles.quantityCard}>
+            <View style={styles.quantityTop}>
+              <Text style={styles.quantityLabel}>Today</Text>
+              <Text style={styles.quantityValue}>
+                {habit.today_count}
+                <Text style={styles.quantityValueMuted}>/{habit.target_count} {habit.unit}</Text>
+              </Text>
+            </View>
+            <ProgressBar
+              progress={habit.today_count / habit.target_count}
+              color={habit.completed_today ? colors.success : habit.color}
+              height={10}
+            />
+            <View style={styles.quantityActions}>
+              <Pressable
+                onPress={() => handleToggle(-1)}
+                disabled={toggling || habit.today_count === 0}
+                style={[styles.quantityButton, habit.today_count === 0 && styles.quantityButtonDisabled]}
+              >
+                <Ionicons name="remove" size={20} color={colors.text} />
+              </Pressable>
+              <Pressable
+                onPress={() => handleToggle(1)}
+                disabled={toggling}
+                style={[styles.quantityButton, { backgroundColor: habit.color }]}
+              >
+                <Ionicons name="add" size={20} color={colors.background} />
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Button
+            title={habit.completed_today ? 'Marked done today' : 'Mark done for today'}
+            icon={habit.completed_today ? 'checkmark-circle' : undefined}
+            onPress={() => handleToggle()}
+            loading={toggling}
+            variant={habit.completed_today ? 'secondary' : 'primary'}
+          />
+        )}
       </FadeInView>
 
       <FadeInView delay={160}>
@@ -233,11 +276,18 @@ const styles = StyleSheet.create({
     padding: spacing(3),
     paddingBottom: spacing(8),
   },
+  heroBanner: {
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing(2.5),
+    marginBottom: spacing(3),
+  },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing(3),
+    marginBottom: spacing(2),
     gap: spacing(2),
   },
   headerLeft: {
@@ -253,18 +303,13 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   editButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 0,
   },
   metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing(1),
-    marginBottom: spacing(2.5),
   },
   metaChip: {
     flexDirection: 'row',
@@ -286,6 +331,51 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing(2),
     marginBottom: spacing(3),
+  },
+  quantityCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing(2.25),
+  },
+  quantityTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: spacing(1.5),
+  },
+  quantityLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+  },
+  quantityValue: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.black,
+  },
+  quantityValueMuted: {
+    color: colors.textFaint,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+  },
+  quantityActions: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing(2),
+    marginTop: spacing(2),
+  },
+  quantityButton: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonDisabled: {
+    opacity: 0.4,
   },
   noteCard: {
     backgroundColor: colors.surface,

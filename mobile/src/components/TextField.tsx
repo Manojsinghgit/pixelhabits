@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
+import { StyleSheet, TextInputProps, View } from 'react-native';
+import { Text } from './Text';
+import { TextInput } from './TextInput';
 import { colors, fontSize, fontWeight, radius, spacing } from '../theme';
 
 interface TextFieldProps extends TextInputProps {

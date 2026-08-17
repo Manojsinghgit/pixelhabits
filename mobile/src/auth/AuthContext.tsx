@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { loginUser, RegisterInput, registerUser } from '../api/auth';
 import { setOnAuthFailure } from '../api/client';
 import { STORAGE_KEYS, storage } from '../api/storage';
+import { registerPushToken, unregisterPushToken } from '../utils/notifications';
 
 interface AuthContextValue {
   username: string | null;
@@ -18,6 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const logout = useCallback(async () => {
+    await unregisterPushToken();
     await Promise.all([
       storage.removeItem(STORAGE_KEYS.accessToken),
       storage.removeItem(STORAGE_KEYS.refreshToken),
@@ -40,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ]);
       if (access && storedUsername) {
         setUsername(storedUsername);
+        registerPushToken();
       }
       setIsLoading(false);
     })();
@@ -53,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       storage.setItem(STORAGE_KEYS.username, usernameInput),
     ]);
     setUsername(usernameInput);
+    registerPushToken();
   }, []);
 
   const register = useCallback(

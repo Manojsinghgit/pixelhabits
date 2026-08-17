@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { colors } from '../theme';
+import { colors, gradients } from '../theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -19,8 +19,8 @@ export function ProgressRing({
   progress,
   size = 132,
   strokeWidth = 12,
-  gradientFrom = '#8A7CFF',
-  gradientTo = '#00D9C0',
+  gradientFrom = gradients.primary[0],
+  gradientTo = gradients.primary[1],
   trackColor = colors.surfaceAlt,
   children,
 }: ProgressRingProps) {

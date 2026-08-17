@@ -14,10 +14,12 @@ export type HabitsStackParamList = {
 export type ProfileStackParamList = {
   Profile: undefined;
   AccountSettings: undefined;
+  Friends: undefined;
 };
 
 export type MainTabParamList = {
   HabitsTab: undefined;
+  Calendar: undefined;
   Summary: undefined;
   ProfileTab: undefined;
 };

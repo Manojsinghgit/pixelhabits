@@ -2,12 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { extractErrorMessage } from '../api/errors';
 import { deleteHabit, listHabits, updateHabit } from '../api/habits';
 import { EmptyState } from '../components/EmptyState';
 import { FadeInView } from '../components/FadeInView';
 import { IconBadge } from '../components/IconBadge';
+import { IconButton } from '../components/IconButton';
 import { HabitsStackParamList } from '../navigation/types';
 import { colors, fontSize, fontWeight, radius, shadow, spacing } from '../theme';
 import { Habit } from '../types';
@@ -85,6 +87,15 @@ export function ArchivedHabitsScreen(_props: Props) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Archived</Text>
+        {habits.length > 0 ? (
+          <Text style={styles.headerSubtitle}>
+            {habits.length} habit{habits.length === 1 ? '' : 's'} paused, ready to pick back up anytime
+          </Text>
+        ) : null}
+      </View>
+
       {error ? (
         <View style={styles.errorBanner}>
           <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
@@ -99,26 +110,29 @@ export function ArchivedHabitsScreen(_props: Props) {
         renderItem={({ item, index }) => (
           <FadeInView delay={index * 50}>
             <View style={styles.row}>
+              <View style={[styles.colorBar, { backgroundColor: item.color }]} />
               <IconBadge name={habitIconName(item.icon)} color={item.color} size={40} iconSize={20} />
               <Text style={styles.name} numberOfLines={1}>
                 {item.name}
               </Text>
-              <Pressable
+              <IconButton
+                name="arrow-undo-outline"
+                iconSize={18}
+                size={36}
+                color={colors.primary}
                 onPress={() => handleRestore(item)}
                 disabled={busyId === item.id}
-                hitSlop={10}
                 style={styles.actionButton}
-              >
-                <Ionicons name="arrow-undo-outline" size={18} color={colors.primary} />
-              </Pressable>
-              <Pressable
+              />
+              <IconButton
+                name="trash-outline"
+                iconSize={18}
+                size={36}
+                color={colors.danger}
                 onPress={() => handleDelete(item)}
                 disabled={busyId === item.id}
-                hitSlop={10}
                 style={styles.actionButton}
-              >
-                <Ionicons name="trash-outline" size={18} color={colors.danger} />
-              </Pressable>
+              />
             </View>
           </FadeInView>
         )}
@@ -145,6 +159,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  header: {
+    paddingHorizontal: spacing(3),
+    paddingTop: spacing(3),
+    paddingBottom: spacing(1),
+  },
+  headerTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+    marginBottom: spacing(0.5),
+  },
+  headerSubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+  },
   list: {
     padding: spacing(3),
     flexGrow: 1,
@@ -159,7 +188,15 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: spacing(1.75),
     marginBottom: spacing(1.5),
+    overflow: 'hidden',
     ...shadow.card,
+  },
+  colorBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   name: {
     flex: 1,
@@ -168,12 +205,8 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
   },
   actionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.surfaceAlt,
+    borderWidth: 0,
   },
   errorBanner: {
     flexDirection: 'row',

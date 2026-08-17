@@ -1,22 +1,18 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { extractErrorMessage } from '../api/errors';
 import { createHabit, deleteHabit, getHabit, updateHabit } from '../api/habits';
 import { Button } from '../components/Button';
 import { FadeInView } from '../components/FadeInView';
 import { TextField } from '../components/TextField';
+import { TimeField } from '../components/TimeField';
 import { HabitsStackParamList } from '../navigation/types';
 import { colors, fontSize, fontWeight, radius, shadow, spacing } from '../theme';
-import { Frequency } from '../types';
+import { Frequency, HabitCategory } from '../types';
+import { CATEGORY_OPTIONS } from '../utils/habitCategories';
 import { HABIT_ICON_OPTIONS, habitIconName } from '../utils/habitIcon';
 import { HABIT_TEMPLATES } from '../utils/habitTemplates';
 import { cancelHabitReminder, scheduleHabitReminder } from '../utils/notifications';
@@ -25,7 +21,6 @@ type Props = NativeStackScreenProps<HabitsStackParamList, 'CreateHabit' | 'EditH
 
 const COLOR_OPTIONS = ['#7C6CFF', '#00AEEF', '#3DDC97', '#FFB84D', '#FF6B6B', '#F368E0'];
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export function HabitFormScreen({ navigation, route }: Props) {
   const habitId = route.params && 'habitId' in route.params ? route.params.habitId : undefined;
@@ -34,8 +29,12 @@ export function HabitFormScreen({ navigation, route }: Props) {
   const [name, setName] = useState('');
   const [icon, setIcon] = useState(HABIT_ICON_OPTIONS[0].value);
   const [color, setColor] = useState(COLOR_OPTIONS[0]);
+  const [category, setCategory] = useState<HabitCategory>('other');
   const [frequency, setFrequency] = useState<Frequency>('daily');
   const [customDays, setCustomDays] = useState<number[]>([]);
+  const [isQuantity, setIsQuantity] = useState(false);
+  const [targetCount, setTargetCount] = useState('');
+  const [unit, setUnit] = useState('');
   const [reminderTime, setReminderTime] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,8 +50,12 @@ export function HabitFormScreen({ navigation, route }: Props) {
         setName(habit.name);
         setIcon(habit.icon);
         setColor(habit.color);
+        setCategory(habit.category);
         setFrequency(habit.frequency);
         setCustomDays(habit.custom_days);
+        setIsQuantity(habit.target_count !== null);
+        setTargetCount(habit.target_count ? String(habit.target_count) : '');
+        setUnit(habit.unit);
         setReminderTime(habit.reminder_time ? habit.reminder_time.slice(0, 5) : '');
         setIsActive(habit.is_active);
       } catch (err) {
@@ -70,12 +73,13 @@ export function HabitFormScreen({ navigation, route }: Props) {
   const handleSave = async () => {
     setError(null);
 
-    if (reminderTime && !TIME_RE.test(reminderTime)) {
-      setError('Reminder time must look like "08:30" (24-hour).');
-      return;
-    }
     if (frequency === 'custom' && customDays.length === 0) {
       setError('Pick at least one day for a custom-days habit.');
+      return;
+    }
+    const parsedTarget = Number(targetCount);
+    if (isQuantity && (!targetCount || !Number.isInteger(parsedTarget) || parsedTarget < 1)) {
+      setError('Enter a target count of at least 1.');
       return;
     }
 
@@ -85,8 +89,11 @@ export function HabitFormScreen({ navigation, route }: Props) {
         name: name.trim(),
         icon,
         color,
+        category,
         frequency,
         custom_days: frequency === 'custom' ? customDays : [],
+        target_count: isQuantity ? parsedTarget : null,
+        unit: isQuantity ? unit.trim() : '',
         reminder_time: reminderTime ? `${reminderTime}:00` : null,
       };
       const saved = habitId ? await updateHabit(habitId, payload) : await createHabit(payload);
@@ -143,7 +150,8 @@ export function HabitFormScreen({ navigation, route }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {!isEditing && (
         <FadeInView>
           <Text style={styles.label}>Quick start</Text>
@@ -207,6 +215,59 @@ export function HabitFormScreen({ navigation, route }: Props) {
               );
             })}
           </View>
+
+          <Text style={[styles.label, styles.labelSpaced]}>Category</Text>
+          <View style={styles.row}>
+            {CATEGORY_OPTIONS.map((option) => {
+              const selected = category === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setCategory(option.value)}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                >
+                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{option.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </FadeInView>
+
+      <FadeInView delay={100}>
+        <View style={styles.card}>
+          <Text style={styles.label}>How do you track it?</Text>
+          <View style={styles.row}>
+            <Pressable
+              onPress={() => setIsQuantity(false)}
+              style={[styles.chip, !isQuantity && styles.chipSelected]}
+            >
+              <Text style={[styles.chipText, !isQuantity && styles.chipTextSelected]}>Yes / no</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setIsQuantity(true)}
+              style={[styles.chip, isQuantity && styles.chipSelected]}
+            >
+              <Text style={[styles.chipText, isQuantity && styles.chipTextSelected]}>Track a number</Text>
+            </Pressable>
+          </View>
+
+          {isQuantity && (
+            <View style={[styles.row, styles.labelSpaced]}>
+              <View style={styles.quantityInput}>
+                <TextField
+                  label="Target"
+                  value={targetCount}
+                  onChangeText={setTargetCount}
+                  placeholder="8"
+                  keyboardType="number-pad"
+                />
+              </View>
+              <View style={styles.quantityInput}>
+                <TextField label="Unit" value={unit} onChangeText={setUnit} placeholder="glasses" />
+              </View>
+            </View>
+          )}
         </View>
       </FadeInView>
 
@@ -250,13 +311,7 @@ export function HabitFormScreen({ navigation, route }: Props) {
       </FadeInView>
 
       <FadeInView delay={180}>
-        <TextField
-          label="Reminder time (optional)"
-          value={reminderTime}
-          onChangeText={setReminderTime}
-          placeholder="08:30"
-          keyboardType="numbers-and-punctuation"
-        />
+        <TimeField label="Reminder time (optional)" value={reminderTime} onChange={setReminderTime} />
       </FadeInView>
 
       {error ? (
@@ -282,7 +337,8 @@ export function HabitFormScreen({ navigation, route }: Props) {
           </View>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -312,6 +368,10 @@ const styles = StyleSheet.create({
   },
   labelSpaced: {
     marginTop: spacing(2.5),
+  },
+  quantityInput: {
+    flex: 1,
+    minWidth: 120,
   },
   row: {
     flexDirection: 'row',

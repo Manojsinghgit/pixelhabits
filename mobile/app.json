@@ -1,23 +1,33 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "PixelHabits",
+    "slug": "pixelhabits",
+    "owner": "mohit_szn",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#080B08",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pixelhabits.app"
     },
     "android": {
+      "package": "com.pixelhabits.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#080B08",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["android.permission.ACTIVITY_RECOGNITION"]
+      "permissions": [
+        "android.permission.ACTIVITY_RECOGNITION"
+      ]
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#080B08",
+      "barStyle": "light-content"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,7 +40,24 @@
         {
           "motionPermission": "Allow PixelHabits to read your step count to show today's activity."
         }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#080B08",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "dark": {
+            "backgroundColor": "#080B08"
+          }
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1a0c3c86-f4ff-411b-83ff-5148b7c14303"
+      }
+    }
   }
 }

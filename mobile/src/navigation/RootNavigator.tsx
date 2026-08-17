@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
+import { CalendarScreen } from '../screens/CalendarScreen';
 import { SummaryScreen } from '../screens/SummaryScreen';
 import { colors, spacing } from '../theme';
 import { AuthNavigator } from './AuthNavigator';
@@ -30,6 +31,16 @@ function MainTabs() {
           title: 'Habits',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'checkbox' : 'checkbox-outline'} size={22} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Calendar"
+        component={CalendarScreen}
+        options={{
+          title: 'Calendar',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={color} />
           ),
         }}
       />

@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { changePassword, getMe, updateMe } from '../api/account';
 import { extractErrorMessage } from '../api/errors';
 import { Button } from '../components/Button';
@@ -100,8 +101,18 @@ export function AccountSettingsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <FadeInView>
+        <View style={styles.pageHeader}>
+          <View style={styles.pageHeaderIcon}>
+            <Ionicons name="settings-outline" size={20} color={colors.primary} />
+          </View>
+          <Text style={styles.pageHeaderTitle}>Account settings</Text>
+        </View>
+      </FadeInView>
+
+      <FadeInView delay={20}>
         <Text style={styles.sectionTitle}>Profile</Text>
         <View style={styles.card}>
           <TextField label="Username" value={username} editable={false} style={styles.readOnlyInput} />
@@ -208,7 +219,8 @@ export function AccountSettingsScreen() {
           />
         </View>
       </FadeInView>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -226,6 +238,25 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing(3),
     paddingBottom: spacing(8),
+  },
+  pageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(1.5),
+    marginBottom: spacing(3),
+  },
+  pageHeaderIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pageHeaderTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
   },
   sectionTitle: {
     color: colors.textMuted,

@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { colors, fontSize, fontWeight, radius, shadow, spacing } from '../theme';
 import { Habit } from '../types';
 import { habitIconName } from '../utils/habitIcon';
@@ -9,11 +11,12 @@ import { IconBadge } from './IconBadge';
 interface HabitCardProps {
   habit: Habit;
   onPress: () => void;
-  onToggleToday: () => void;
+  onToggleToday: (delta?: number) => void;
   toggling?: boolean;
 }
 
 export function HabitCard({ habit, onPress, onToggleToday, toggling }: HabitCardProps) {
+  const isQuantity = habit.target_count !== null;
   const checkScale = useRef(new Animated.Value(habit.completed_today ? 1 : 0)).current;
   const cardScale = useRef(new Animated.Value(1)).current;
 
@@ -34,6 +37,13 @@ export function HabitCard({ habit, onPress, onToggleToday, toggling }: HabitCard
         onPressOut={() => Animated.spring(cardScale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 6 }).start()}
         style={styles.card}
       >
+        <LinearGradient
+          colors={[`${habit.color}29`, `${habit.color}00`]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
         <View style={[styles.colorBar, { backgroundColor: habit.color }]} />
         <IconBadge name={habitIconName(habit.icon)} color={habit.color} size={44} />
         <View style={styles.info}>
@@ -50,21 +60,48 @@ export function HabitCard({ habit, onPress, onToggleToday, toggling }: HabitCard
             ) : null}
           </View>
         </View>
-        <Pressable
-          onPress={onToggleToday}
-          disabled={toggling}
-          hitSlop={12}
-          style={[styles.checkbox, habit.completed_today && { backgroundColor: habit.color, borderColor: habit.color }]}
-        >
-          <Animated.View
-            style={{
-              transform: [{ scale: checkScale }],
-              opacity: checkScale,
-            }}
+        {isQuantity ? (
+          <View style={styles.stepper}>
+            <Pressable
+              onPress={() => onToggleToday(-1)}
+              disabled={toggling || habit.today_count === 0}
+              hitSlop={8}
+              android_ripple={{ color: colors.borderLight, borderless: true }}
+              style={[styles.stepperButton, habit.today_count === 0 && styles.stepperButtonDisabled]}
+            >
+              <Ionicons name="remove" size={16} color={colors.text} />
+            </Pressable>
+            <Text style={[styles.stepperCount, habit.completed_today && { color: habit.color }]}>
+              {habit.today_count}/{habit.target_count}
+            </Text>
+            <Pressable
+              onPress={() => onToggleToday(1)}
+              disabled={toggling}
+              hitSlop={8}
+              android_ripple={{ color: colors.background, borderless: true }}
+              style={[styles.stepperButton, { backgroundColor: habit.color }]}
+            >
+              <Ionicons name="add" size={16} color={colors.background} />
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            onPress={() => onToggleToday()}
+            disabled={toggling}
+            hitSlop={12}
+            android_ripple={{ color: colors.borderLight, borderless: true }}
+            style={[styles.checkbox, habit.completed_today && { backgroundColor: habit.color, borderColor: habit.color }]}
           >
-            <Ionicons name="checkmark" size={20} color={colors.background} />
-          </Animated.View>
-        </Pressable>
+            <Animated.View
+              style={{
+                transform: [{ scale: checkScale }],
+                opacity: checkScale,
+              }}
+            >
+              <Ionicons name="checkmark" size={20} color={colors.background} />
+            </Animated.View>
+          </Pressable>
+        )}
       </Pressable>
     </Animated.View>
   );
@@ -123,5 +160,28 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(0.75),
+  },
+  stepperButton: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperButtonDisabled: {
+    opacity: 0.4,
+  },
+  stepperCount: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    minWidth: 36,
+    textAlign: 'center',
   },
 });

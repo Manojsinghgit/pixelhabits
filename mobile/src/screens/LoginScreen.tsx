@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Text';
 import { extractErrorMessage } from '../api/errors';
 import { useAuth } from '../auth/AuthContext';
 import { Button } from '../components/Button';

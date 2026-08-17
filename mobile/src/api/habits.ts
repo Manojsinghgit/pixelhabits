@@ -1,18 +1,26 @@
 import { api } from './client';
-import { Frequency, Habit, HabitLog, HabitsSummary, Paginated } from '../types';
+import { CalendarDay, Frequency, Habit, HabitCategory, HabitLog, HabitsSummary, Paginated } from '../types';
 
 export interface HabitInput {
   name: string;
   icon?: string;
   color?: string;
+  category?: HabitCategory;
   frequency: Frequency;
   custom_days?: number[];
+  target_count?: number | null;
+  unit?: string;
   reminder_time?: string | null;
   is_active?: boolean;
 }
 
-export async function listHabits(): Promise<Habit[]> {
-  const { data } = await api.get<Paginated<Habit>>('/api/habits/');
+export interface ListHabitsParams {
+  search?: string;
+  category?: HabitCategory;
+}
+
+export async function listHabits(params?: ListHabitsParams): Promise<Habit[]> {
+  const { data } = await api.get<Paginated<Habit>>('/api/habits/', { params });
   return data.results;
 }
 
@@ -35,8 +43,11 @@ export async function deleteHabit(id: number): Promise<void> {
   await api.delete(`/api/habits/${id}/`);
 }
 
-export async function toggleHabitLog(id: number, date?: string): Promise<HabitLog> {
-  const { data } = await api.post<HabitLog>(`/api/habits/${id}/log/`, date ? { date } : {});
+export async function toggleHabitLog(id: number, date?: string, delta?: number): Promise<HabitLog> {
+  const body: { date?: string; delta?: number } = {};
+  if (date) body.date = date;
+  if (delta !== undefined) body.delta = delta;
+  const { data } = await api.post<HabitLog>(`/api/habits/${id}/log/`, body);
   return data;
 }
 
@@ -52,5 +63,10 @@ export async function setHabitNote(id: number, note: string, date?: string): Pro
 
 export async function getHabitsSummary(): Promise<HabitsSummary> {
   const { data } = await api.get<HabitsSummary>('/api/habits/summary/');
+  return data;
+}
+
+export async function getHabitsCalendar(month?: string): Promise<CalendarDay[]> {
+  const { data } = await api.get<CalendarDay[]>('/api/habits/calendar/', { params: month ? { month } : {} });
   return data;
 }

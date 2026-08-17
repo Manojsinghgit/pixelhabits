@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthContext';
+import { ResponsiveFrame } from './src/components/ResponsiveFrame';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors } from './src/theme';
 
@@ -22,9 +23,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <NavigationContainer theme={navTheme}>
-          <RootNavigator />
-        </NavigationContainer>
+        <ResponsiveFrame>
+          <NavigationContainer theme={navTheme}>
+            <RootNavigator />
+          </NavigationContainer>
+        </ResponsiveFrame>
         <StatusBar style="light" />
       </AuthProvider>
     </SafeAreaProvider>

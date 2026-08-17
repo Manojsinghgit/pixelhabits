@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { AccountSettingsScreen } from '../screens/AccountSettingsScreen';
+import { FriendsScreen } from '../screens/FriendsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { colors } from '../theme';
 import { ProfileStackParamList } from './types';
@@ -22,6 +23,11 @@ export function ProfileNavigator() {
         name="AccountSettings"
         component={AccountSettingsScreen}
         options={{ title: 'Account settings', ...headerOptions }}
+      />
+      <Stack.Screen
+        name="Friends"
+        component={FriendsScreen}
+        options={{ title: 'Friends', ...headerOptions }}
       />
     </Stack.Navigator>
   );

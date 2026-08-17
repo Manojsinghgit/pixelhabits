@@ -1,8 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text } from '../components/Text';
 import { extractErrorMessage } from '../api/errors';
+import { getInsights } from '../api/gamification';
 import { getHabitsSummary } from '../api/habits';
 import { EmptyState } from '../components/EmptyState';
 import { FadeInView } from '../components/FadeInView';
@@ -10,7 +14,7 @@ import { IconBadge } from '../components/IconBadge';
 import { ProgressBar } from '../components/ProgressBar';
 import { ProgressRing } from '../components/ProgressRing';
 import { colors, fontSize, fontWeight, radius, shadow, spacing } from '../theme';
-import { HabitsSummary } from '../types';
+import { HabitsSummary, Insights } from '../types';
 import { habitIconName } from '../utils/habitIcon';
 
 function formatRange(start: string, end: string): string {
@@ -21,7 +25,9 @@ function formatRange(start: string, end: string): string {
 }
 
 export function SummaryScreen() {
+  const insets = useSafeAreaInsets();
   const [summary, setSummary] = useState<HabitsSummary | null>(null);
+  const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +35,9 @@ export function SummaryScreen() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const data = await getHabitsSummary();
+      const [data, insightsData] = await Promise.all([getHabitsSummary(), getInsights()]);
       setSummary(data);
+      setInsights(insightsData);
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
@@ -55,7 +62,7 @@ export function SummaryScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top }]}
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={colors.text} />
@@ -74,12 +81,17 @@ export function SummaryScreen() {
       {summary && (
         <>
           <FadeInView>
-            <View style={styles.overallCard}>
-              <ProgressRing progress={summary.overall_completion_pct / 100} size={128} strokeWidth={12}>
+            <LinearGradient
+              colors={[`${colors.primary}26`, `${colors.accent}14`]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.overallCard}
+            >
+              <ProgressRing progress={summary.overall_completion_pct / 100} size={136} strokeWidth={13}>
                 <Text style={styles.ringValue}>{summary.overall_completion_pct}%</Text>
               </ProgressRing>
               <Text style={styles.overallLabel}>overall completion</Text>
-            </View>
+            </LinearGradient>
           </FadeInView>
 
           {summary.habits.length === 0 ? (
@@ -92,6 +104,7 @@ export function SummaryScreen() {
             summary.habits.map((habit, index) => (
               <FadeInView key={habit.id} delay={80 + index * 60}>
                 <View style={styles.habitRow}>
+                  <View style={[styles.colorBar, { backgroundColor: habit.color }]} />
                   <IconBadge name={habitIconName(habit.icon)} color={habit.color} size={40} iconSize={20} />
                   <View style={styles.habitInfo}>
                     <Text style={styles.habitName} numberOfLines={1}>
@@ -112,6 +125,83 @@ export function SummaryScreen() {
                 </View>
               </FadeInView>
             ))
+          )}
+
+          {insights && (insights.best_weekday || insights.most_consistent || insights.pairs.length > 0) && (
+            <FadeInView delay={80 + summary.habits.length * 60}>
+              <Text style={styles.insightsTitle}>Insights</Text>
+              <View style={styles.insightsList}>
+                {insights.trend_pct !== 0 && (
+                  <View style={styles.insightRow}>
+                    <View
+                      style={[
+                        styles.insightIconWrap,
+                        { backgroundColor: insights.trend_pct > 0 ? colors.successSoft : colors.dangerSoft },
+                      ]}
+                    >
+                      <Ionicons
+                        name={insights.trend_pct > 0 ? 'trending-up' : 'trending-down'}
+                        size={16}
+                        color={insights.trend_pct > 0 ? colors.success : colors.danger}
+                      />
+                    </View>
+                    <Text style={styles.insightText}>
+                      Completion is {insights.trend_pct > 0 ? 'up' : 'down'}{' '}
+                      <Text style={styles.insightBold}>{Math.abs(insights.trend_pct)}%</Text> vs last week
+                    </Text>
+                  </View>
+                )}
+
+                {insights.best_weekday && (
+                  <View style={styles.insightRow}>
+                    <View style={[styles.insightIconWrap, { backgroundColor: colors.primarySoft }]}>
+                      <Ionicons name="calendar" size={16} color={colors.primary} />
+                    </View>
+                    <Text style={styles.insightText}>
+                      <Text style={styles.insightBold}>{insights.best_weekday}s</Text> are your best day (
+                      {insights.best_weekday_pct}% completion)
+                    </Text>
+                  </View>
+                )}
+
+                {insights.most_consistent && (
+                  <View style={styles.insightRow}>
+                    <View style={[styles.insightIconWrap, { backgroundColor: `${insights.most_consistent.color}26` }]}>
+                      <Ionicons name="ribbon" size={16} color={insights.most_consistent.color} />
+                    </View>
+                    <Text style={styles.insightText}>
+                      <Text style={styles.insightBold}>{insights.most_consistent.name}</Text> is your most consistent
+                      habit ({insights.most_consistent.pct}%, last 30 days)
+                    </Text>
+                  </View>
+                )}
+
+                {insights.least_consistent && (
+                  <View style={styles.insightRow}>
+                    <View style={[styles.insightIconWrap, { backgroundColor: colors.warningSoft }]}>
+                      <Ionicons name="alert-circle-outline" size={16} color={colors.warning} />
+                    </View>
+                    <Text style={styles.insightText}>
+                      <Text style={styles.insightBold}>{insights.least_consistent.name}</Text> could use attention (
+                      {insights.least_consistent.pct}%, last 30 days)
+                    </Text>
+                  </View>
+                )}
+
+                {insights.pairs.map((pair, index) => (
+                  <View key={index} style={styles.insightRow}>
+                    <View style={[styles.insightIconWrap, { backgroundColor: colors.accentSoft }]}>
+                      <Ionicons name="link" size={16} color={colors.accent} />
+                    </View>
+                    <Text style={styles.insightText}>
+                      You're <Text style={styles.insightBold}>{pair.lift_pct}% more likely</Text> to do{' '}
+                      <Text style={styles.insightBold}>{pair.habit_b}</Text> on days you do{' '}
+                      <Text style={styles.insightBold}>{pair.habit_a}</Text>
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </FadeInView>
           )}
         </>
       )}
@@ -159,14 +249,13 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   overallCard: {
-    backgroundColor: colors.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
     paddingVertical: spacing(3.5),
     alignItems: 'center',
     marginBottom: spacing(3),
-    ...shadow.card,
+    ...shadow.floating,
   },
   ringValue: {
     fontSize: fontSize.xxl,
@@ -189,6 +278,14 @@ const styles = StyleSheet.create({
     padding: spacing(2),
     marginBottom: spacing(1.5),
     gap: spacing(1.5),
+    overflow: 'hidden',
+  },
+  colorBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   habitInfo: {
     flex: 1,
@@ -221,6 +318,45 @@ const styles = StyleSheet.create({
   habitPct: {
     color: colors.text,
     fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+  },
+  insightsTitle: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: spacing(2),
+    marginBottom: spacing(1.25),
+  },
+  insightsList: {
+    gap: spacing(1.25),
+  },
+  insightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing(1.5),
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing(1.75),
+  },
+  insightIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  insightText: {
+    flex: 1,
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+    lineHeight: 19,
+  },
+  insightBold: {
+    color: colors.text,
     fontWeight: fontWeight.bold,
   },
 });

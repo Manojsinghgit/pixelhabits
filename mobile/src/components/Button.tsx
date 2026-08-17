@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef } from 'react';
-import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Text';
 import { colors, fontSize, fontWeight, gradients, radius, shadow, spacing } from '../theme';
 
 interface ButtonProps {
