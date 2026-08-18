@@ -2,6 +2,7 @@
   "expo": {
     "name": "PixelHabits",
     "slug": "pixelhabits",
+    "newArchEnabled": false,
     "owner": "mohit_szn",
     "version": "1.0.0",
     "orientation": "portrait",
